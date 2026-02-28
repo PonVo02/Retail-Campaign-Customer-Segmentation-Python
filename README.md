@@ -115,7 +115,7 @@ This workbook contains two tables (sheets):
 
 
 
-## 3) Data Loading & Quick Preview
+## 3) Exploratory Data Analysis (EDA)
 
 **Code cell [1️⃣]**
 - Load dataset from Excel and preview the first few rows
@@ -166,21 +166,85 @@ print ("date max:", df["InvoiceDate"].max())
 
 <img width="792" height="358" alt="Ảnh màn hình 2026-02-28 lúc 15 15 26" src="https://github.com/user-attachments/assets/cc9f1db4-ca9d-44f4-a915-e9f40621fa4a" />
 
-- Dataset contains 541,909 transaction line items across 25,900 unique invoices (multiple items per invoice).
-- There are 4,372 identified customers, but CustomerID is missing in 135,080 rows, so rows without customer info need to be handled (drop/impute depending on analysis).
-- Transactions span from 2010-12-01 to 2011-12-09.
+
+
+**Code cell [4️⃣]**
+```python
+df.describe()
+```
+
+**Output**
+
+<img width="793" height="261" alt="Ảnh màn hình 2026-02-28 lúc 18 47 11" src="https://github.com/user-attachments/assets/4d83e192-c3fc-4dca-8518-6b45ca58057c" />
+
+
+### Summary
+- The dataset contains 541,909 transaction line items, spanning 25,900 unique invoices and 8 columns (`InvoiceNo`, `StockCode`, `Description`, `Quantity`, `InvoiceDate`, `UnitPrice`, `CustomerID`, `Country`).
+- Transactions cover the period `2010-12-01 to 2011-12-09`.
+- Missing values are present, especially CustomerID (406,829 non-null out of 541,909), which impacts customer-level analyses.
+- `describe()` indicates negative values in Quantity and UnitPrice, suggesting cancellations/returns or invalid transactions that must be handled before analysis.
+- Based on dataset validation, invoices with `InvoiceNo` starting with “C” are treated as cancellation (credit) transactions.
+
+
+
+### 💡Conclusion
+- This dataset is at the invoice-line grain (multiple items per invoice), suitable for product, invoice, and customer analyses after cleaning.
+- For data integrity:
+  - Remove cancellation transactions where InvoiceNo starts with “C” (credit notes) to avoid negative revenue distortion.
+  - Investigate and handle negative Quantity/UnitPrice records that are not cancellations (potential data errors or special adjustments).
+  - Decide how to treat rows with missing CustomerID depending on analysis goals.
 
 
 ## 4) Data Cleaning & Preprocessing
 
+RFM segmentation must reflect real purchase behavior. Missing CustomerID, cancellations, and non-positive Quantity/UnitPrice can distort Monetary and Frequency, leading to wrong customer segments and misleading marketing decisions.
+
+**Cleaning rules applied:**
+
+- Remove row with missing CustomerID (cannot assign purchases to a customer).
+- Exclude cancelled invoices (InvoiceNo starts with"C")
+- keep only valid sales transactions where Quanity > 0 and UnitPrice > 0.
+- Create Sales = Quantity * UnitPrice to represent trasaction value (Monetary)
+
+**Code cell5️⃣**
+```python
+df2= df.copy()
+df2["InvoiceDate"] = pd.to_datetime(df2["InvoiceDate"])
+
+
+# drop CustomerID null
+# remove cancelled invoices (InvoiceNO start with"C")
+# keep Quanity > 0, UnitPrice > 0
+#remove __isNull (Use ~ to reverse the condition.)
+
+
+df2 = df2 [
+    (~df2["CustomerID"].isnull()) & #  ~ to reverse the condition.
+    (~df2["InvoiceNo"].astype(str).str.startswith("C", na=False)) &
+    (df2["Quantity"]>0) &
+    (df2["UnitPrice"]>0)
+]
+df2["Sales"] = df2["Quantity"]*df2["UnitPrice"]
+print(f"Data before cleaning: {df.shape}")
+print(f"Data after cleaning: {df2.shape}")
+print(f"Number of rows dropped: {len(df)-len(df2)}")
+
+#sanity check
+assert df2["CustomerID"].notna().all()
+assert (~df2["InvoiceNo"].astype(str).str.startswith("C", na=False).all())
+assert (df2["Quantity"]>0).all()
+assert (df2["UnitPrice"]>0).all()
+```
+
+**Output**
+
+<img width="327" height="61" alt="Ảnh màn hình 2026-02-28 lúc 19 48 37" src="https://github.com/user-attachments/assets/e763cb31-2929-4602-adc6-465c4dbd703a" />
 
 
 
 
-## 5) Exploratory Data Analysis (EDA)
+## 5) Apply RFM Model
 
-## 6) Apply RFM Model
+## 6) Visualization & Analysis
 
-## 7) Visualization & Analysis
-
-## 8) Insight & Recommendation
+## 7) Insight & Recommendation
