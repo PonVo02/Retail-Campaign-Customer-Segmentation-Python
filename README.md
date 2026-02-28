@@ -115,14 +115,72 @@ This workbook contains two tables (sheets):
 
 
 
+## 3) Data Loading & Quick Preview
+
+**Code cell [1️⃣]**
+- Load dataset from Excel and preview the first few rows
+```python
+df = pd.read_excel("/content/ecommerce retail.xlsx")
+
+df.head()
+```
+**Output**
+<img width="975" height="173" alt="Ảnh màn hình 2026-02-28 lúc 11 57 57" src="https://github.com/user-attachments/assets/656aa782-e566-48f5-8fee-4c47b5e0d7d9" />
 
 
-## 3) Data Cleaning & Preprocessing
+**Code cell [2️⃣]**
+- Dataset overview: columns names and dimemsions (row, columns)
+```python
+display(df.columns)
+display(df.shape)
+```
 
-## 4) Exploratory Data Analysis (EDA)
+**Output**
 
-## 5) Apply RFM Model
+<img width="632" height="90" alt="Ảnh màn hình 2026-02-28 lúc 14 57 20" src="https://github.com/user-attachments/assets/e4c9d882-421c-4e68-bd12-df3eeb0239ee" />
 
-## 6) Visualization & Analysis
 
-## 7) Insight & Recommendation
+
+**Code cell [3️⃣]**
+- Reviewed data types and missing values (`df.info()`).
+- Counted total rows, unique invoices, and unique customers (including vs excluding null `CustomerID`).
+- Confirmed the transaction period by checking `InvoiceDate` min/max.
+
+```python
+df.info()
+
+n_rows = len(df)
+n_invoices = df['InvoiceNo'].nunique()
+n_customers_all = df["CustomerID"].nunique(dropna =False)
+n_customers_notnull = df["CustomerID"].nunique(dropna=True)
+
+print(f"Number of rows: {n_rows}")
+print(f"Number of invoices: {n_invoices}")
+print(f"Number of customers (all): {n_customers_all}")
+print(f"Number of customers (not null): {n_customers_notnull}")
+print ("date min:", df["InvoiceDate"].min())
+print ("date max:", df["InvoiceDate"].max())
+```
+
+**Output**
+
+<img width="792" height="358" alt="Ảnh màn hình 2026-02-28 lúc 15 15 26" src="https://github.com/user-attachments/assets/cc9f1db4-ca9d-44f4-a915-e9f40621fa4a" />
+
+- Dataset contains 541,909 transaction line items across 25,900 unique invoices (multiple items per invoice).
+- There are 4,372 identified customers, but CustomerID is missing in 135,080 rows, so rows without customer info need to be handled (drop/impute depending on analysis).
+- Transactions span from 2010-12-01 to 2011-12-09.
+
+
+## 4) Data Cleaning & Preprocessing
+
+
+
+
+
+## 5) Exploratory Data Analysis (EDA)
+
+## 6) Apply RFM Model
+
+## 7) Visualization & Analysis
+
+## 8) Insight & Recommendation
