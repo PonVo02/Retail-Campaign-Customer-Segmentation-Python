@@ -243,8 +243,212 @@ assert (df2["UnitPrice"]>0).all()
 
 
 
-## 5) Apply RFM Model
+## 5) RFM Scoring & Customer Segments
+
+### Build RFM metric
+
+- **Purpose:** aggregate transaction-level data to customer-level RFM metrics.
+- **Output:** a table with Recency/Frequency/Monetary per customer.
+
+**Code cell6️⃣**
+```
+snapshot = pd.Timestamp("2011-12-31")
+
+rfm = (
+    df2.groupby("CustomerID")
+    .agg(
+        Recency = ("InvoiceDate", lambda x: (snapshot - x.max()).days),
+        Frequency = ("InvoiceNo", "nunique"),
+        Monetary = ("Sales", "sum")
+    )
+)
+rfm.head()
+```
+
+**Output**
+
+<img width="805" height="206" alt="Ảnh màn hình 2026-03-01 lúc 07 19 47" src="https://github.com/user-attachments/assets/4a6c790f-fa6c-4dff-8824-5cb04cae7ee0" />
+
+
+### Score customers
+
+- **Purpose:** convert R/F/M into 1–5 scores and create RFM code.
+- **Output:** R_Score, F_Score, M_Score, RFM_Score.
+
+**Code cell7️⃣**
+```
+rfm = rfm.copy()
+
+rfm['R_Score'] = pd.qcut(rfm['Recency'],5, labels=[5,4,3,2,1]).astype(int)
+rfm['F_Score'] = pd.qcut(rfm['Frequency'].rank(method='first'),5, labels=[1,2,3,4,5]).astype(int)
+rfm['M_Score'] = pd.qcut(rfm['Monetary'],5, labels=[1,2,3,4,5]).astype(int)
+
+rfm["RFM_Score"] = (
+    rfm["R_Score"].astype(str) +
+    rfm["F_Score"].astype(str) +
+    rfm["M_Score"].astype(str)
+)
+
+rfm.head()
+```
+
+**Output**
+
+<img width="789" height="214" alt="Ảnh màn hình 2026-03-01 lúc 07 24 13" src="https://github.com/user-attachments/assets/35a80c1e-fef2-405b-a263-d5d6e916563e" />
+
+### Summary
+Apply RFM Model
+- Converted transaction-level data into customer-level RFM metrics by aggregating on CustomerID.
+- Defined a snapshot date (2011-12-31) to calculate:
+  - Recency: days since the customer’s most recent purchase (lower is better)
+  - Frequency: number of unique invoices/purchases (higher is better)
+  - Monetary: total spending (Sales sum) (higher is better)
+- Scored customers into quintiles (1–5) using pd.qcut:
+  - R_Score: reversed scale (most recent customers get higher scores)
+  - F_Score, M_Score: higher values get higher scores
+
+
+### Segment mapping 
+- **Purpose:** map RFM score patterns to business segments
+- **Output:** Segment label per customer + summary table
+
+**Code cell8️⃣**
+```python
+seg = pd.read_excel('/content/ecommerce retail.xlsx', sheet_name='Segmentation')
+
+seg_map ={}
+for _, row in seg.iterrows():
+  scores =[s.strip() for s in str(row["RFM Score"]).split(",")]
+  seg_map[row["Segment"]] = set(scores)
+
+def assign_segment(score: str) -> str:
+  for name, sset in seg_map.items():
+    if score in sset:
+      return name
+  return "Others"
+
+rfm["Segment"] = rfm["RFM_Score"].apply(assign_segment)
+rfm
+     
+```
+
+**Output**
+<img width="973" height="385" alt="Ảnh màn hình 2026-03-01 lúc 07 47 42" src="https://github.com/user-attachments/assets/d09808be-ef05-461a-83a8-9bca9a85114d" />
+
+
+**Code cell 9️⃣**
+```python
+# 3 metrics summary table
+segment_metrics = (
+    rfm.groupby("Segment")
+               .agg(
+                   customers=("CustomerID", "nunique"),
+                   revenue=("Monetary", "sum"),
+                   median_recency=("Recency", "median")
+               )
+               .sort_values("revenue", ascending=False)
+)
+
+segment_metrics["customer_pct"] = segment_metrics["customers"] / segment_metrics["customers"].sum()
+segment_metrics["revenue_pct"] = segment_metrics["revenue"] / segment_metrics["revenue"].sum()
+
+segment_metrics
+```
+**Output**
+<img width="998" height="374" alt="Ảnh màn hình 2026-03-01 lúc 07 51 24" src="https://github.com/user-attachments/assets/ce055d7f-3748-4820-81c6-f755e3004b11" />
+
+
+
 
 ## 6) Visualization & Analysis
+**Create Color map**
+
+**Cell code**
+```python
+segments = segment_metrics.index.tolist()
+cmap = plt.cm.get_cmap("tab20", len(segments))
+SEGMENT_COLORS = {seg: cmap(i) for i, seg in enumerate(segments)}
+```
+
+**Customer by segment**
+
+**Code cell**
+```
+s = segment_metrics["customers"].sort_values()
+colors = [SEGMENT_COLORS[seg] for seg in s.index]
+
+plt.figure(figsize=(10, 6))
+ax = s.plot(kind="barh", color=colors)
+ax.grid(axis="x", linestyle="--", alpha=0.3)
+ax.spines["top"].set_visible(False)
+ax.spines["right"].set_visible(False)
+plt.title("Customers by Segment")
+plt.xlabel("Customers")
+plt.ylabel("Segment")
+plt.tight_layout()
+plt.show()
+     
+```
+**Output**
+<img width="1454" height="593" alt="Ảnh màn hình 2026-03-01 lúc 08 43 54" src="https://github.com/user-attachments/assets/36a9a05e-944e-43df-9682-30a462c3d901" />
+
+**Insight** (Customers by Segment):
+
+- The customer base is concentrated in **Champions** (largest segment) and a large inactive pool (**Hibernating customers** and **Lost customers**).
+- This suggests Superstore has strong high-value engagement, but also a significant number of customers who have become inactive and may require reactivation strategies.
+- For the holiday campaign, broad reach should focus on large segments (Champions / Hibernating / Lost), but incentives should be differentiated to avoid overspending on low-response groups.
+
+**Revenue by segment**
+
+**Cell code**
+```python
+s = segment_metrics["revenue"].sort_values()
+colors = [SEGMENT_COLORS[seg] for seg in s.index]
+
+plt.figure(figsize=(10, 6))
+ax = s.plot(kind="barh", color=colors)
+ax.grid(axis="x", linestyle="--", alpha=0.3)
+ax.spines["top"].set_visible(False)
+ax.spines["right"].set_visible(False)
+plt.title("Revenue by Segment")
+plt.xlabel("Revenue")
+plt.ylabel("Segment")
+plt.tight_layout()
+plt.show()
+```
+**Output**
+<img width="1427" height="594" alt="Ảnh màn hình 2026-03-01 lúc 08 46 04" src="https://github.com/user-attachments/assets/2fc357d6-8db0-4638-84b7-95c207a890e5" />
+**Insight** (Revenue by Segment):
+
+**Champions dominate total revenue**, indicating a small group of highly valuable customers drives a disproportionate share of sales.
+**Loyal** and **At Risk** contribute meaningful revenue but are far behind Champions; these are critical “second-tier” groups where retention/win-back can protect revenue efficiently.
+Marketing should prioritize premium rewards for Champions, while designing targeted win-back offers for At Risk to prevent revenue leakage during the holiday period.
+
+**Median recency by segment**
+
+**Cell code**
+```
+s = segment_metrics["median_recency"].sort_values()
+colors = [SEGMENT_COLORS[seg] for seg in s.index]
+
+plt.figure(figsize=(10, 6))
+ax = s.plot(kind="barh", color=colors)
+ax.grid(axis="x", linestyle="--", alpha=0.3)
+ax.spines["top"].set_visible(False)
+ax.spines["right"].set_visible(False)
+plt.title("Median Recency by Segment")
+plt.xlabel("Median Recency (days)")
+plt.ylabel("Segment")
+plt.tight_layout()
+plt.show()
+```
+**Output**
+<img width="1407" height="612" alt="Ảnh màn hình 2026-03-01 lúc 08 48 07" src="https://github.com/user-attachments/assets/c658e00c-0a3f-40eb-bfb9-eb26b2ef37c3" />
+
+**Insight** (Median Recency by Segment):
+
+- Recency clearly separates active vs inactive customers: **Champions have the lowest median recency** (most recently active), while **Lost customers** and **Cannot Lose Them** show very high recency (cold customers).
+- High recency segments represent churn risk; these customers are less likely to respond without stronger incentives or personalized messaging.
+- Recommended focus: keep Champions warm (light rewards + upsell), and run win-back campaigns for At Risk / Cannot Lose Them with personalized offers and reminders to recover high-value customers.
 
 ## 7) Insight & Recommendation
