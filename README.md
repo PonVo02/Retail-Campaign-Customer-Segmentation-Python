@@ -5,7 +5,7 @@
 
 #### **📖 What is this project about?**
 
-Build a customer segmentation workflow using the RFM (Recency–Frequency–Monetary) framework to classify SuperStore customers into meaningful groups (e.g., Champions, Loyal, At Risk…) and support targeted marketing campaigns for the Christmas & New Year season.
+Build a customer segmentation workflow using the RFM (Recency–Frequency–Monetary) framework to classify SuperStore customers into meaningful groups and support targeted marketing campaigns for the Christmas & New Year season.
 
 #### **🙋🏻‍♂️ Who is this project for?**
 
