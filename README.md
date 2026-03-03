@@ -9,7 +9,7 @@ Build a customer segmentation workflow using the RFM (Recency–Frequency–Mone
 
 #### **🙋🏻‍♂️ Who is this project for?**
 
-- **Marketing team:** design different campaign offers for each customer segment (loyalty, win-back, upsell).
+- **Marketing team:** design different campaign offers for each customer segment.
 - **Business stakeholders (Marketing Director):** prioritize budget and identify high-value customers.
 - **Data/Analytics team:** provide a scalable segmentation pipeline (Python) instead of manual Excel classification.
 
