@@ -1,7 +1,18 @@
-# RFM Customer Segmentation (E-commerce Retail)
+# 📊 Retail Customer Segmentation for Holiday Campaigns
 
-## 1. Project Overview
+Customer segmentation using RFM analysis (Recency, Frequency, Monetary) to support targeted marketing campaigns for a global retail company during the Christmas & New Year seaso
+
+👤 Author: Vo Van Pon
+📅 Date: 2025
+🛠 Tools Used: Python (Pandas, NumPy, Matplotlib, Seaborn)
+
+## 📑 Table of Contents
+
+
+## 📌 1. Background & Overview
+
 ### Objective
+
 
 #### **📖 What is this project about?**
 
@@ -55,7 +66,6 @@ RFM is a practical and business-friendly model because it converts transaction h
 - **Time period**: Transactions recorded from December 2010 to December 2011
 - - **Customers:** ~4,300 unique customers
 
----
 ### 📂 Data Structure & Relationships
 
 #### 1️⃣ Sheets Used (Tables)
@@ -116,35 +126,52 @@ This workbook contains two tables (sheets):
 
 
 
-## 3) Data Cleaning & Preprocessing
+## 🧹3. Data Cleaning & Preprocessing
 
-### Data Quality Issues
-Before building the RFM model, several data quality issues were identified in the raw transaction dataset:
-- Some transactions have missing `CustomerID`, meaning purchases cannot be assigned to a specific customer.
-- Certain invoices start with "C", indicating cancelled transactions.
-- Some rows contain **non-positive Quantity or UnitPrice**, which do not represent valid purchases.
-These issues could distort the **Frequency** and **Monetary** metrics used in RFM segmentation.
+Before building the RFM segmentation model, the raw transaction dataset was inspected for data quality issues that could distort customer behavior metrics.
 
-### Cleaning Rules Applied
+### ⚠️ Data Quality Issues
+
+Several issues were identified in the raw dataset:
+
+- Missing **CustomerID** values, meaning transactions cannot be linked to a specific customer.
+
+- Some **InvoiceNo values start with "C"**, indicating cancelled transactions.
+
+- Certain rows contain **non-positive Quantity or UnitPrice**, which do not represent valid purchases.
+
+These issues could distort the calculation of:
+
+- **Frequency** (number of purchases)
+
+- **Monetary value** (total spending)
+
+Therefore, the dataset required cleaning before computing RFM metrics
+
+### 🔧 Cleaning Rules Applied
 To ensure the analysis reflects **actual customer purchasing behavior**, the following rules were applied:
-- Remove rows with missing CustomerID
-- Exclude **Cancelled invoices** (InvoiceNO starting with"C")
+- Remove rows with missing `CustomerID`
+- Exclude **Cancelled invoices** (InvoiceNO starting with`"C"`)
 - Keep only transactions where:
   - `Quanity` > 0
-  - UnitPrice > 0
-- Create a new column:
+  - `UnitPrice` > 0
+- Create Sales metric
+```python
   Sales = Quantity * UnitPrice
+```
+This metric represents the **transaction value**, which will later be aggregated to compute the **Monetary value** for each customer.
 
-This column represents the **Transaction value** used to compute customer spending.
 
+### 📊 Final Cleaned Dataset
 
-### Final Dataset
 <img width="582" height="66" alt="Ảnh màn hình 2026-03-06 lúc 22 56 47" src="https://github.com/user-attachments/assets/9200c1d7-9c38-4aff-a732-f9628d9fad92" />
 
-The cleaned dataset represents **valid purchase transactions**, which are then used to compute **Recency, Frequency, and Monetary metric for each customer** 
+After applying the cleaning rules, the dataset contains **only valid purchase transactions**.
+
+These transactions are used to compute **Recency, Frequency, and Monetary (RFM) metrics** at the customer level.
 
 ---
-## 4) Exploratory Data Analysis (EDA)
+## 🔎 4. Exploratory Data Analysis (EDA)
 
 Before applying the RFM model, exploratory analysis was conducted 
 to understand transaction patterns, customer purchasing behavior,
@@ -154,7 +181,7 @@ This step helps ensure the segmentation model reflects actual
 customer activity and spending behavior.
 
 
-### 4.1) Dataset Overview
+### 📊 Transaction Overview
 After cleaning, the dataset contains:
 - **397,884** valid transaction rows
 - **4,338** unique customers
@@ -165,49 +192,32 @@ the dataset covers transactions between:
 
 This indicates a relatively large transactional dataset with sufficient customer activity to support behavioral segmentation.
 
-### 4.2) Distribution of Customer Behavior
+### 📈 Distribution of RFM Metrics
 
 <img width="1790" height="489" alt="Ảnh màn hình 2026-03-06 lúc 23 38 11" src="https://github.com/user-attachments/assets/130590a0-7d5b-4153-ad3e-67a2ca8ddb81" />
 
 <Details>
-  <summary> visualization log_Frequency & log_Monetary </summary>
+  <summary> 👉🏻 visualization log_Frequency & log_Monetary </summary>
   
   <img width="1202" height="495" alt="Ảnh màn hình 2026-03-06 lúc 23 40 18" src="https://github.com/user-attachments/assets/97b6347b-8e76-4db2-96e7-d3eea0bfd6ac" />
   
 
 </Details>
 
-The distribution of Frequency and Monetary values is highly right-skewed.
+Summary observations:
 
-Most customers purchase only a few times and generate relatively low revenue, while a small group of customers purchases frequently and contributes significantly more spending.
+- **Recency varies widely**, indicating both active and inactive customers.
 
-For example:
+- **Frequency distribution is right-skewed**, meaning most customers purchase only a few times.
 
-- 50% of customers place only two orders or fewer
+- **Monetary values are highly skewed**, with a small number of customers generating very high revenue.
 
-- A small number of customers generate extremely high purchase counts and spending
-
-This uneven distribution suggests that customer value is not evenly spread across the customer base.
-
-### 4.3) Implication for Customer Segmentation
-
-The observed purchasing patterns indicate that different groups of customers behave very differently in terms of:
-
-- how recently they purchased
-
-- how often they purchase
-
-- how much they spend
-
-Because of this variation in customer behavior, a segmentation approach is required to identify high-value customers, frequent buyers, and potentially inactive customers.
-
-Therefore, the **RFM (Recency, Frequency, Monetary)** model is applied to segment customers based on these three behavioral dimensions.
-
+This pattern is typical in retail datasets, where a **small group of customers drives a large portion of revenue**.
 
 ---
 
 
-## 5) RFM Customer Segmentation
+## 📊 5. RFM Segmentation Method
 
 ### RFM Framework
 
@@ -219,7 +229,6 @@ To segment customers based on purchasing behavior, this project applies the **RF
 
 These three metrics help capture customer activity, loyalty, and value in a simple and business-friendly way.
 
----
 
 ### Customer-Level RFM Table
 
@@ -233,7 +242,6 @@ Each customer received:
 
 This customer-level table becomes the analytical base for segmentation.
 
----
 
 ### RFM Scoring
 
@@ -314,7 +322,7 @@ Instead of treating all customers the same, the company can now identify:
 - customers suitable for **low-cost reactivation**
 
 ---
-## 📊 6) Segment Visualization & Analysis
+## 📈 6. Segment Visualization & Analysis
 
 After assigning each customer to an RFM segment, the next step is to analyze how these segments differ in terms of **size, value, and purchasing behavior**.
 
@@ -330,7 +338,7 @@ these analyses help translate RFM score into **clear business insight for market
 
 ---
 
-### 📦 6.1 Segment Performance Summary
+### 📦 Segment Performance Summary
 
 This part compares segment size and business value using:
 - segment size
@@ -411,7 +419,7 @@ Even smaller segments may contain **high-value customers**, making them importan
 
 ---
 
-### 6.2 RFM Profile by Segment
+### 📈 RFM Profile by Segment
 
 While segment performance explains business impact, the RFM profile explains **customer behavior**.
 
@@ -487,7 +495,7 @@ Some segments contain **valuable customers who may be becoming inactive**, makin
 
 ---
 
-### 🎯 6.3 Segment Contribution Groups
+### 🎯 Segment Contribution Groups
 
 To make the segment analysis easier to interpret from a business perspective, individual RFM segments are grouped into four broader contribution categories:
 
@@ -522,7 +530,7 @@ contribution_map = {
 ```
 
 
-#### 📊 Customer Share vs Revenue Share by Contribution Group
+#### 📊 Visual Customer Share vs Revenue Share by Contribution Group
 
 <img width="985" height="589" alt="Ảnh màn hình 2026-03-07 lúc 13 03 52" src="https://github.com/user-attachments/assets/f911f20b-66ff-4646-9a58-54f607b3e781" />
 
@@ -535,9 +543,8 @@ The chart shows that customer value is highly uneven across contribution groups.
 - **Growth Segment** currently contributes less revenue, but represents future growth potential.
 
 This grouped view helps translate detailed segment analysis into broader business priorities.
-----
 
-### 6.4 Key Takeaway
+### 💡 Key Takeaway
 
 Overall, the analysis shows that customer value is highly uneven across segments.
 
@@ -547,7 +554,7 @@ The RFM model therefore helps turn raw transaction data into actionable customer
 
 
 ---
-## 7) Key Insights
+## 🧠7) Key Insights
 
 The analysis reveals several important patterns about customer behavior and revenue contribution within the dataset.
 
@@ -616,7 +623,7 @@ Understanding these differences enables the business to design **targeted market
 
 
 ---
-## 8) Recommendations
+## 🚀 8. Marketing Recommendations
 
 Based on the RFM segmentation analysis and the key insights identified, several targeted strategies can be implemented to improve customer retention, increase revenue, and optimize marketing efforts.
 
