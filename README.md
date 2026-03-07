@@ -1,6 +1,6 @@
 # RFM Customer Segmentation (E-commerce Retail)
 
-## 1) Project Overview
+## 1. Project Overview
 ### Objective
 
 #### **📖 What is this project about?**
@@ -46,22 +46,23 @@ RFM is a practical and business-friendly model because it converts transaction h
   - ➡️ identifies high-value customers
  
 
-## 2) Dataset Description & Data structure
+## 2.📂 Dataset Description & Data structure
 
 ### Data Source
 - **Source:** Provided dataset for E-commerce retail analysis  
 - **Format:** `.xlsx` (Excel workbook with **2 sheets**)  
-- **Size:** **541,910 rows × 8 columns** (Sheet 1: *E-commerce Retail*).  
-  Sheet 2 includes customer-level segmentation outputs (RFM scores & segment labels).
+- **Size:** **541,909 rows × 8 columns** 
+- **Time period**: Transactions recorded from December 2010 to December 2011
+- - **Customers:** ~4,300 unique customers
 
 ---
-### Data Structure & Relationships
+### 📂 Data Structure & Relationships
 
 #### 1️⃣ Sheets Used (Tables)
 This workbook contains two tables (sheets):
 
 - **Sheet 1 — E-commerce Retail (Transaction-level):**  
-  Contains transaction-level data, including order details, customer IDs, and purchase information..
+  Contains transaction-level data, including order details, customer IDs, and purchase information.
 
 - **Sheet 2 — Segmentation (Customer-level):**  
   Customer segmentation results with **RFM scores** and **segment labels**.
@@ -115,173 +116,147 @@ This workbook contains two tables (sheets):
 
 
 
-## 3) Exploratory Data Analysis (EDA)
+## 3) Data Cleaning & Preprocessing
 
-**Code cell [1️⃣]**
-- Load dataset from Excel and preview the first few rows
+### Data Quality Issues
+Before building the RFM model, several data quality issues were identified in the raw transaction dataset:
+- Some transactions have missing `CustomerID`, meaning purchases cannot be assigned to a specific customer.
+- Certain invoices start with "C", indicating cancelled transactions.
+- Some rows contain **non-positive Quantity or UnitPrice**, which do not represent valid purchases.
+These issues could distort the **Frequency** and **Monetary** metrics used in RFM segmentation.
+
+### Cleaning Rules Applied
+To ensure the analysis reflects **actual customer purchasing behavior**, the following rules were applied:
+- Remove rows with missing CustomerID
+- Exclude **Cancelled invoices** (InvoiceNO starting with"C")
+- Keep only transactions where:
+  - `Quanity` > 0
+  - UnitPrice > 0
+- Create a new column:
+  Sales = Quantity * UnitPrice
+
+This column represents the **Transaction value** used to compute customer spending.
+
+
+### Final Dataset
+<img width="582" height="66" alt="Ảnh màn hình 2026-03-06 lúc 22 56 47" src="https://github.com/user-attachments/assets/9200c1d7-9c38-4aff-a732-f9628d9fad92" />
+
+The cleaned dataset represents **valid purchase transactions**, which are then used to compute **Recency, Frequency, and Monetary metric for each customer** 
+
+---
+## 4) Exploratory Data Analysis (EDA)
+
+Before applying the RFM model, exploratory analysis was conducted 
+to understand transaction patterns, customer purchasing behavior,
+and the distribution of key metrics.
+
+This step helps ensure the segmentation model reflects actual
+customer activity and spending behavior.
+
+
+### 4.1) Dataset Overview
+After cleaning, the dataset contains:
+- **397,884** valid transaction rows
+- **4,338** unique customers
+
+the dataset covers transactions between:
+
+**01 Dec 2010 -> 09 Dec 2011**
+
+This indicates a relatively large transactional dataset with sufficient customer activity to support behavioral segmentation.
+
+### 4.2) Distribution of Customer Behavior
+
+<img width="1790" height="489" alt="Ảnh màn hình 2026-03-06 lúc 23 38 11" src="https://github.com/user-attachments/assets/130590a0-7d5b-4153-ad3e-67a2ca8ddb81" />
+
+<Details>
+  <summary> visualization log_Frequency & log_Monetary </summary>
+  
+  <img width="1202" height="495" alt="Ảnh màn hình 2026-03-06 lúc 23 40 18" src="https://github.com/user-attachments/assets/97b6347b-8e76-4db2-96e7-d3eea0bfd6ac" />
+  
+
+</Details>
+
+The distribution of Frequency and Monetary values is highly right-skewed.
+
+Most customers purchase only a few times and generate relatively low revenue, while a small group of customers purchases frequently and contributes significantly more spending.
+
+For example:
+
+- 50% of customers place only two orders or fewer
+
+- A small number of customers generate extremely high purchase counts and spending
+
+This uneven distribution suggests that customer value is not evenly spread across the customer base.
+
+### 4.3) Implication for Customer Segmentation
+
+The observed purchasing patterns indicate that different groups of customers behave very differently in terms of:
+
+- how recently they purchased
+
+- how often they purchase
+
+- how much they spend
+
+Because of this variation in customer behavior, a segmentation approach is required to identify high-value customers, frequent buyers, and potentially inactive customers.
+
+Therefore, the **RFM (Recency, Frequency, Monetary)** model is applied to segment customers based on these three behavioral dimensions.
+
+
+---
+
+
+## 5) RFM Customer Segmentation
+
+### RFM Framework
+
+To segment customers based on purchasing behavior, this project applies the **RFM framework**, which evaluates each customer using three dimensions:
+
+- **Recency (R):** how recently the customer made a purchase  
+- **Frequency (F):** how often the customer purchased  
+- **Monetary (M):** how much the customer spent  
+
+These three metrics help capture customer activity, loyalty, and value in a simple and business-friendly way.
+
+---
+
+### Customer-Level RFM Table
+
+After cleaning the transaction data, all records were aggregated to the **customer level**.
+
+Each customer received:
+
+- **Recency:** number of days since the most recent purchase  
+- **Frequency:** number of unique invoices/orders  
+- **Monetary:** total spending across all valid transactions  
+
+This customer-level table becomes the analytical base for segmentation.
+
+---
+
+### RFM Scoring
+
+Each metric was converted into a score from **1 to 5**:
+
+- **Recency:** lower values are better, so more recent customers receive higher scores  
+- **Frequency:** higher values are better, so more frequent customers receive higher scores  
+- **Monetary:** higher values are better, so higher-spending customers receive higher scores  
+
+The three scores were then combined into a single **RFM score**.
+
+For example:
+
+- **555** = very recent, very frequent, high spending  
+- **111** = inactive, infrequent, low spending
+
+**Cell Code**
 ```python
-df = pd.read_excel("/content/ecommerce retail.xlsx")
+rfm["R_Score"] = pd.qcut(rfm["Recency"], 5, labels=[5,4,3,2,1])
 
-df.head()
-```
-**Output**
-<img width="975" height="173" alt="Ảnh màn hình 2026-02-28 lúc 11 57 57" src="https://github.com/user-attachments/assets/656aa782-e566-48f5-8fee-4c47b5e0d7d9" />
+rfm["F_Score"] = pd.qcut(rfm["Frequency"].rank(method="first"), 5, labels=[1,2,3,4,5])
 
-
-**Code cell [2️⃣]**
-- Dataset overview: columns names and dimemsions (row, columns)
-```python
-display(df.columns)
-display(df.shape)
-```
-
-**Output**
-
-<img width="632" height="90" alt="Ảnh màn hình 2026-02-28 lúc 14 57 20" src="https://github.com/user-attachments/assets/e4c9d882-421c-4e68-bd12-df3eeb0239ee" />
-
-
-
-**Code cell [3️⃣]**
-- Reviewed data types and missing values (`df.info()`).
-- Counted total rows, unique invoices, and unique customers (including vs excluding null `CustomerID`).
-- Confirmed the transaction period by checking `InvoiceDate` min/max.
-
-```python
-df.info()
-
-n_rows = len(df)
-n_invoices = df['InvoiceNo'].nunique()
-n_customers_all = df["CustomerID"].nunique(dropna =False)
-n_customers_notnull = df["CustomerID"].nunique(dropna=True)
-
-print(f"Number of rows: {n_rows}")
-print(f"Number of invoices: {n_invoices}")
-print(f"Number of customers (all): {n_customers_all}")
-print(f"Number of customers (not null): {n_customers_notnull}")
-print ("date min:", df["InvoiceDate"].min())
-print ("date max:", df["InvoiceDate"].max())
-```
-
-**Output**
-
-<img width="792" height="358" alt="Ảnh màn hình 2026-02-28 lúc 15 15 26" src="https://github.com/user-attachments/assets/cc9f1db4-ca9d-44f4-a915-e9f40621fa4a" />
-
-
-
-**Code cell [4️⃣]**
-```python
-df.describe()
-```
-
-**Output**
-
-<img width="793" height="261" alt="Ảnh màn hình 2026-02-28 lúc 18 47 11" src="https://github.com/user-attachments/assets/4d83e192-c3fc-4dca-8518-6b45ca58057c" />
-
-
-### Summary
-- The dataset contains 541,909 transaction line items, spanning 25,900 unique invoices and 8 columns (`InvoiceNo`, `StockCode`, `Description`, `Quantity`, `InvoiceDate`, `UnitPrice`, `CustomerID`, `Country`).
-- Transactions cover the period `2010-12-01 to 2011-12-09`.
-- Missing values are present, especially CustomerID (406,829 non-null out of 541,909), which impacts customer-level analyses.
-- `describe()` indicates negative values in Quantity and UnitPrice, suggesting cancellations/returns or invalid transactions that must be handled before analysis.
-- Based on dataset validation, invoices with `InvoiceNo` starting with “C” are treated as cancellation (credit) transactions.
-
-
-
-### 💡Conclusion
-- This dataset is at the invoice-line grain (multiple items per invoice), suitable for product, invoice, and customer analyses after cleaning.
-- For data integrity:
-  - Remove cancellation transactions where InvoiceNo starts with “C” (credit notes) to avoid negative revenue distortion.
-  - Investigate and handle negative Quantity/UnitPrice records that are not cancellations (potential data errors or special adjustments).
-  - Decide how to treat rows with missing CustomerID depending on analysis goals.
-
-
-## 4) Data Cleaning & Preprocessing
-
-RFM segmentation must reflect real purchase behavior. Missing CustomerID, cancellations, and non-positive Quantity/UnitPrice can distort Monetary and Frequency, leading to wrong customer segments and misleading marketing decisions.
-
-**Cleaning rules applied:**
-
-- Remove row with missing CustomerID (cannot assign purchases to a customer).
-- Exclude cancelled invoices (InvoiceNo starts with"C")
-- keep only valid sales transactions where Quanity > 0 and UnitPrice > 0.
-- Create Sales = Quantity * UnitPrice to represent trasaction value (Monetary)
-
-**Code cell5️⃣**
-```python
-df2= df.copy()
-df2["InvoiceDate"] = pd.to_datetime(df2["InvoiceDate"])
-
-
-# drop CustomerID null
-# remove cancelled invoices (InvoiceNO start with"C")
-# keep Quanity > 0, UnitPrice > 0
-#remove __isNull (Use ~ to reverse the condition.)
-
-
-df2 = df2 [
-    (~df2["CustomerID"].isnull()) & #  ~ to reverse the condition.
-    (~df2["InvoiceNo"].astype(str).str.startswith("C", na=False)) &
-    (df2["Quantity"]>0) &
-    (df2["UnitPrice"]>0)
-]
-df2["Sales"] = df2["Quantity"]*df2["UnitPrice"]
-print(f"Data before cleaning: {df.shape}")
-print(f"Data after cleaning: {df2.shape}")
-print(f"Number of rows dropped: {len(df)-len(df2)}")
-
-#sanity check
-assert df2["CustomerID"].notna().all()
-assert (~df2["InvoiceNo"].astype(str).str.startswith("C", na=False).all())
-assert (df2["Quantity"]>0).all()
-assert (df2["UnitPrice"]>0).all()
-```
-
-**Output**
-
-<img width="327" height="61" alt="Ảnh màn hình 2026-02-28 lúc 19 48 37" src="https://github.com/user-attachments/assets/e763cb31-2929-4602-adc6-465c4dbd703a" />
-
-
-
-
-## 5) RFM Scoring & Customer Segments
-
-### Build RFM metric
-
-- **Purpose:** aggregate transaction-level data to customer-level RFM metrics.
-- **Output:** a table with Recency/Frequency/Monetary per customer.
-
-**Code cell6️⃣**
-```
-snapshot = pd.Timestamp("2011-12-31")
-
-rfm = (
-    df2.groupby("CustomerID")
-    .agg(
-        Recency = ("InvoiceDate", lambda x: (snapshot - x.max()).days),
-        Frequency = ("InvoiceNo", "nunique"),
-        Monetary = ("Sales", "sum")
-    )
-)
-rfm.head()
-```
-
-**Output**
-
-<img width="805" height="206" alt="Ảnh màn hình 2026-03-01 lúc 07 19 47" src="https://github.com/user-attachments/assets/4a6c790f-fa6c-4dff-8824-5cb04cae7ee0" />
-
-
-### Score customers
-
-- **Purpose:** convert R/F/M into 1–5 scores and create RFM code.
-- **Output:** R_Score, F_Score, M_Score, RFM_Score.
-
-**Code cell7️⃣**
-```
-rfm = rfm.copy()
-
-rfm['R_Score'] = pd.qcut(rfm['Recency'],5, labels=[5,4,3,2,1]).astype(int)
-rfm['F_Score'] = pd.qcut(rfm['Frequency'].rank(method='first'),5, labels=[1,2,3,4,5]).astype(int)
-rfm['M_Score'] = pd.qcut(rfm['Monetary'],5, labels=[1,2,3,4,5]).astype(int)
+rfm["M_Score"] = pd.qcut(rfm["Monetary"], 5, labels=[1,2,3,4,5])
 
 rfm["RFM_Score"] = (
     rfm["R_Score"].astype(str) +
@@ -292,163 +267,466 @@ rfm["RFM_Score"] = (
 rfm.head()
 ```
 
-**Output**
+**OutPut**
 
-<img width="789" height="214" alt="Ảnh màn hình 2026-03-01 lúc 07 24 13" src="https://github.com/user-attachments/assets/35a80c1e-fef2-405b-a263-d5d6e916563e" />
+<img width="931" height="203" alt="Ảnh màn hình 2026-03-07 lúc 07 26 17" src="https://github.com/user-attachments/assets/b60c24da-8f07-49ac-9d32-6c32a8fb4b07" />
 
-### Summary
-Apply RFM Model
-- Converted transaction-level data into customer-level RFM metrics by aggregating on CustomerID.
-- Defined a snapshot date (2011-12-31) to calculate:
-  - Recency: days since the customer’s most recent purchase (lower is better)
-  - Frequency: number of unique invoices/purchases (higher is better)
-  - Monetary: total spending (Sales sum) (higher is better)
-- Scored customers into quintiles (1–5) using pd.qcut:
-  - R_Score: reversed scale (most recent customers get higher scores)
-  - F_Score, M_Score: higher values get higher scores
+Each customer receives an R, F, and M score from 1–5.
+These scores are combined into a 3-digit RFM score used for segmentation.
 
 
-### Segment mapping 
-- **Purpose:** map RFM score patterns to business segments
-- **Output:** Segment label per customer + summary table
+---
 
-**Code cell8️⃣**
-```python
-seg = pd.read_excel('/content/ecommerce retail.xlsx', sheet_name='Segmentation')
+### Segment Mapping
 
-seg_map ={}
-for _, row in seg.iterrows():
-  scores =[s.strip() for s in str(row["RFM Score"]).split(",")]
-  seg_map[row["Segment"]] = set(scores)
+After calculating the RFM score for each customer, the next step is to translate these numeric scores into **business-friendly customer segments**.
 
-def assign_segment(score: str) -> str:
-  for name, sset in seg_map.items():
-    if score in sset:
-      return name
-  return "Others"
+While the RFM score captures customer behavior numerically (e.g., `555`, `344`, `211`), these codes are not intuitive for marketing teams. Therefore, the scores are mapped into meaningful customer segments.
 
-rfm["Segment"] = rfm["RFM_Score"].apply(assign_segment)
-rfm
-     
-```
+For example:
 
-**Output**
-<img width="973" height="385" alt="Ảnh màn hình 2026-03-01 lúc 07 47 42" src="https://github.com/user-attachments/assets/d09808be-ef05-461a-83a8-9bca9a85114d" />
+| RFM Score Pattern | Segment |
+|-------------------|--------|
+| High R, High F, High M | Champions |
+| High F and M with recent purchases | Loyal |
+| High historical value but inactive recently | At Risk |
+| Long time since last purchase and low activity | Lost |
 
+This mapping step converts behavioral metrics into clear customer groups that can be used for marketing strategies.
 
-**Code cell 9️⃣**
-```python
-# 3 metrics summary table
-segment_metrics = (
-    rfm.groupby("Segment")
-               .agg(
-                   customers=("CustomerID", "nunique"),
-                   revenue=("Monetary", "sum"),
-                   median_recency=("Recency", "median")
-               )
-               .sort_values("revenue", ascending=False)
-)
-
-segment_metrics["customer_pct"] = segment_metrics["customers"] / segment_metrics["customers"].sum()
-segment_metrics["revenue_pct"] = segment_metrics["revenue"] / segment_metrics["revenue"].sum()
-
-segment_metrics
-```
-**Output**
-<img width="998" height="374" alt="Ảnh màn hình 2026-03-01 lúc 07 51 24" src="https://github.com/user-attachments/assets/ce055d7f-3748-4820-81c6-f755e3004b11" />
+The mapping rules are stored in a **segmentation table**, and each customer is assigned a segment based on their RFM score.
 
 
 
+This step transforms raw customer behavior into clear groups that are easier to interpret and act on.
 
-## 6) Visualization & Analysis
-**Create Color map**
+---
+
+### Why this step matters
+
+RFM segmentation helps the business move from **raw transaction data** to **actionable customer groups**.
+
+Instead of treating all customers the same, the company can now identify:
+
+- customers to **retain**
+- customers to **grow**
+- customers to **win back**
+- customers suitable for **low-cost reactivation**
+
+---
+## 📊 6) Segment Visualization & Analysis
+
+After assigning each customer to an RFM segment, the next step is to analyze how these segments differ in terms of **size, value, and purchasing behavior**.
+
+This section focuses on three perspectives:
+
+- **📦 Segment Performance** — which segments contribute the most customers and revenue
+
+- **📈 RFM Behavioral Profile** — how segments differ in recency, frequency, and spending
+
+- **🎯 Segment Contribution Groups** — how segments can be grouped based on business value
+  
+these analyses help translate RFM score into **clear business insight for marketing strategy**.
+
+---
+
+### 📦 6.1 Segment Performance Summary
+
+This part compares segment size and business value using:
+- segment size
+- revenue contribution
+- revenue per customer
+
+These views help identify which segments are large, which ones contribute the most revenue, and which ones generate higher value per customer.
+
+#### 👥 Customers by Segment
+
+
+<img width="988" height="586" alt="Ảnh màn hình 2026-03-07 lúc 07 55 55" src="https://github.com/user-attachments/assets/22e54c40-684f-42a5-9954-ae4ca537f2fc" />
+
+Key observations:
+
+- **Champions** represent the largest portion of the active customer base.
+
+- **Hibernating** and **Lost customers** also form large segments.
+
+- Smaller segments such as **Cannot Lose Them** and **Promising** represent niche customer groups.
+
+📌 Insight
+
+The customer base contains both **highly engaged customers and a large inactive population**, indicating opportunities for both **retention and reactivation strategies**.
+
+#### 💰 Revenue by Segment
+
+<img width="986" height="583" alt="Ảnh màn hình 2026-03-07 lúc 08 04 24" src="https://github.com/user-attachments/assets/5e74de10-e0ec-44c8-b949-b4d2d8f62df3" />
+
+Key observations:
+
+- **Champions contribute the largest share of revenue**, reflecting their frequent purchases and higher spending.
+
+- **Loyal customers** also generate significant revenue.
+
+- Segments like **Lost** and **Hibernating**, despite being large in size, contribute relatively little revenue.
+
+📌 Insight
+
+Revenue is **highly concentrated in a smaller group of active customers**, reinforcing the importance of **retaining high-value segments**.
+
+
+#### ⚖️ Customer Share vs Revenue Share
+
+<img width="987" height="585" alt="Ảnh màn hình 2026-03-07 lúc 08 04 00" src="https://github.com/user-attachments/assets/5dd7e677-1616-4e57-ac40-d23a8597d020" />
+
+Interpretation:
+
+- **Champions** significantly over-contribute to revenue relative to their size.
+
+- **Loyal customers** also deliver strong revenue impact.
+
+- **Hibernating** and **Lost** customers account for many customers but minimal revenue.
+
+📌 Insight
+
+Customer value is **unevenly distributed**, meaning marketing strategies should prioritize **high-value segments instead of treating all customers equally**.
+
+
+#### 💎 Revenue per Customer
+
+<img width="986" height="584" alt="Ảnh màn hình 2026-03-07 lúc 13 48 16" src="https://github.com/user-attachments/assets/9e00a476-5ce0-4d4d-af29-3ed897513b37" />
+
+This metric highlights the **average value generated by each customer segment**.
+
+Key observations:
+
+- **Champions** generate the highest revenue per customer.
+
+- **Loyal** and **Cannot Lose Them** segments also contain high-value customers.
+
+- **Lost** and **Hibernating** customers generate significantly lower revenue per customer.
+
+📌 Insight
+
+Even smaller segments may contain **high-value customers**, making them important targets for **retention or reactivation campaigns**.
+
+
+---
+
+### 6.2 RFM Profile by Segment
+
+While segment performance explains business impact, the RFM profile explains **customer behavior**.
+
+This section compares segments across the three RFM dimensions:
+
+🕒 Recency -> How recently customers made a purchase
+
+🔁 Frequency -> How often customers purchase
+
+💵 Monetary -> How much customers spend
+
+These behavioral patterns help explain **why certain segments generate more revenue than others**.
+
+#### 🕒 Recency by Segment 
+
+<img width="985" height="583" alt="Ảnh màn hình 2026-03-07 lúc 08 12 03" src="https://github.com/user-attachments/assets/112d8897-4094-4e4d-93f4-1b4633abbd65" />
+
+Recency indicates **how recently customers interacted with the business**.
+
+Observations:
+
+- **Champions** have the lowest recency, meaning they purchased recently.
+
+- **Loyal customers** are also relatively active.
+
+- **Lost and Hibernating customers** show very high recency values.
+
+📌 Insight
+
+Recency clearly separates **active customers from disengaged ones**, making it a strong indicator of **customer churn risk**.
+
+
+#### 🔁 Frequency by Segment
+
+<img width="985" height="583" alt="Ảnh màn hình 2026-03-07 lúc 12 33 05" src="https://github.com/user-attachments/assets/7a50643f-2abb-462c-bbfa-9c6d957bcdb2" />
+
+Frequency measures **repeat purchasing behavior**.
+
+Observations:
+
+- **Champions** show the highest purchase frequency.
+
+- **Loyal customers** also demonstrate consistent purchasing patterns.
+
+- **New Customers** and **Potential Loyalists** have lower purchase frequency.
+
+- **Lost customers** rarely purchase.
+
+📌 Insight
+
+Frequency highlights **habitual buyers vs occasional shoppers**, helping identify segments with strong loyalty potential.
+
+#### 💵 Monetary by Segment
+
+<img width="984" height="585" alt="Ảnh màn hình 2026-03-07 lúc 12 33 33" src="https://github.com/user-attachments/assets/5309f082-2927-4df5-afb3-fbc5709c4be9" />
+
+Monetary value reflects **customer spending power**.
+
+Observations:
+
+- **Champions** spend the most overall.
+
+- **Loyal and Cannot Lose Them** segments also show strong historical value.
+
+- **At Risk customers** still retain high monetary value despite declining engagement.
+
+- **Lost customers** generate the lowest spending levels.
+
+📌 Insight
+
+Some segments contain **valuable customers who may be becoming inactive**, making them prime targets for **win-back strategies**.
+
+
+---
+
+### 🎯 6.3 Segment Contribution Groups
+
+To make the segment analysis easier to interpret from a business perspective, individual RFM segments are grouped into four broader contribution categories:
+
+- **Core Customers**: Champions, Loyal  
+- **Growth Segment**: Potential Loyalist, Promising, New Customers  
+- **Revenue at Risk**: At Risk, Cannot Lose Them, Need Attention  
+- **Inactive Customers**: Hibernating customers, Lost customers, About To Sleep
+
+
+This grouped view helps simplify customer strategy by showing which groups currently drive revenue, which groups can be developed further, and which groups require reactivation or churn prevention efforts.
+
+
 
 **Cell code**
 ```python
-segments = segment_metrics.index.tolist()
-cmap = plt.cm.get_cmap("tab20", len(segments))
-SEGMENT_COLORS = {seg: cmap(i) for i, seg in enumerate(segments)}
+contribution_map = {
+    "Champions": "Core Customers",
+    "Loyal": "Core Customers",
+
+    "Potential Loyalist": "Growth Segment",
+    "Promising": "Growth Segment",
+    "New Customers": "Growth Segment",
+
+    "At Risk": "Revenue at Risk",
+    "Cannot Lose Them": "Revenue at Risk",
+
+    "Need Attention": "Inactive Customers",
+    "About To Sleep": "Inactive Customers",
+    "Hibernating customers": "Inactive Customers",
+    "Lost customers": "Inactive Customers"
+}
 ```
 
-**Customer by segment**
 
-**Code cell**
-```
-s = segment_metrics["customers"].sort_values()
-colors = [SEGMENT_COLORS[seg] for seg in s.index]
+#### 📊 Customer Share vs Revenue Share by Contribution Group
 
-plt.figure(figsize=(10, 6))
-ax = s.plot(kind="barh", color=colors)
-ax.grid(axis="x", linestyle="--", alpha=0.3)
-ax.spines["top"].set_visible(False)
-ax.spines["right"].set_visible(False)
-plt.title("Customers by Segment")
-plt.xlabel("Customers")
-plt.ylabel("Segment")
-plt.tight_layout()
-plt.show()
-     
-```
-**Output**
-<img width="1454" height="593" alt="Ảnh màn hình 2026-03-01 lúc 08 43 54" src="https://github.com/user-attachments/assets/36a9a05e-944e-43df-9682-30a462c3d901" />
+<img width="985" height="589" alt="Ảnh màn hình 2026-03-07 lúc 13 03 52" src="https://github.com/user-attachments/assets/f911f20b-66ff-4646-9a58-54f607b3e781" />
 
-**Insight** (Customers by Segment):
 
-- The customer base is concentrated in **Champions** (largest segment) and a large inactive pool (**Hibernating customers** and **Lost customers**).
-- This suggests Superstore has strong high-value engagement, but also a significant number of customers who have become inactive and may require reactivation strategies.
-- For the holiday campaign, broad reach should focus on large segments (Champions / Hibernating / Lost), but incentives should be differentiated to avoid overspending on low-response groups.
+The chart shows that customer value is highly uneven across contribution groups.
 
-**Revenue by segment**
+- **Core Customers** contribute a disproportionately large share of revenue relative to their size.
+- **Inactive Customers** account for the largest share of customers but generate limited revenue.
+- **Revenue at Risk** still contributes meaningful revenue, which suggests a need for churn prevention.
+- **Growth Segment** currently contributes less revenue, but represents future growth potential.
 
-**Cell code**
-```python
-s = segment_metrics["revenue"].sort_values()
-colors = [SEGMENT_COLORS[seg] for seg in s.index]
+This grouped view helps translate detailed segment analysis into broader business priorities.
+----
 
-plt.figure(figsize=(10, 6))
-ax = s.plot(kind="barh", color=colors)
-ax.grid(axis="x", linestyle="--", alpha=0.3)
-ax.spines["top"].set_visible(False)
-ax.spines["right"].set_visible(False)
-plt.title("Revenue by Segment")
-plt.xlabel("Revenue")
-plt.ylabel("Segment")
-plt.tight_layout()
-plt.show()
-```
-**Output**
-<img width="1427" height="594" alt="Ảnh màn hình 2026-03-01 lúc 08 46 04" src="https://github.com/user-attachments/assets/2fc357d6-8db0-4638-84b7-95c207a890e5" />
-**Insight** (Revenue by Segment):
+### 6.4 Key Takeaway
 
-**Champions dominate total revenue**, indicating a small group of highly valuable customers drives a disproportionate share of sales.
-**Loyal** and **At Risk** contribute meaningful revenue but are far behind Champions; these are critical “second-tier” groups where retention/win-back can protect revenue efficiently.
-Marketing should prioritize premium rewards for Champions, while designing targeted win-back offers for At Risk to prevent revenue leakage during the holiday period.
+Overall, the analysis shows that customer value is highly uneven across segments.
 
-**Median recency by segment**
+A relatively small group of highly engaged customers contributes a large share of revenue, while many customers purchase infrequently or have become inactive.
 
-**Cell code**
-```
-s = segment_metrics["median_recency"].sort_values()
-colors = [SEGMENT_COLORS[seg] for seg in s.index]
+The RFM model therefore helps turn raw transaction data into actionable customer groups that can support more targeted marketing decisions.
 
-plt.figure(figsize=(10, 6))
-ax = s.plot(kind="barh", color=colors)
-ax.grid(axis="x", linestyle="--", alpha=0.3)
-ax.spines["top"].set_visible(False)
-ax.spines["right"].set_visible(False)
-plt.title("Median Recency by Segment")
-plt.xlabel("Median Recency (days)")
-plt.ylabel("Segment")
-plt.tight_layout()
-plt.show()
-```
-**Output**
-<img width="1407" height="612" alt="Ảnh màn hình 2026-03-01 lúc 08 48 07" src="https://github.com/user-attachments/assets/c658e00c-0a3f-40eb-bfb9-eb26b2ef37c3" />
 
-**Insight** (Median Recency by Segment):
+---
+## 7) Key Insights
 
-- Recency clearly separates active vs inactive customers: **Champions have the lowest median recency** (most recently active), while **Lost customers** and **Cannot Lose Them** show very high recency (cold customers).
-- High recency segments represent churn risk; these customers are less likely to respond without stronger incentives or personalized messaging.
-- Recommended focus: keep Champions warm (light rewards + upsell), and run win-back campaigns for At Risk / Cannot Lose Them with personalized offers and reminders to recover high-value customers.
+The analysis reveals several important patterns about customer behavior and revenue contribution within the dataset.
 
-## 7) Insight & Recommendation
+### 1. Revenue is highly concentrated in a small group of core customers
+
+The **Core Customers** group, which includes **Champions** and **Loyal customers**, contributes a disproportionately large share of total revenue despite representing a smaller portion of the customer base.
+
+These customers show the strongest RFM profile:
+- **Low recency** (they purchased recently)
+- **High frequency** (they purchase repeatedly)
+- **High monetary value** (they spend significantly more)
+
+This confirms that a relatively small group of highly engaged customers drives the majority of business value.
+
+
+### 2. A large portion of the customer base is inactive or low-engagement
+
+Segments such as **Hibernating customers**, **Lost customers**, and **About To Sleep** represent a large share of total customers but contribute very little revenue.
+
+These customers typically show:
+- **High recency** (they have not purchased recently)
+- **Low frequency**
+- **Low monetary value**
+
+This suggests that a large portion of the customer base is currently inactive and generates limited business impact.
+
+
+### 3. There is a valuable group of customers at risk of churn
+
+Segments such as **At Risk** and **Cannot Lose Them** still show relatively high **monetary value**, indicating that they were once strong contributors to revenue.
+
+However, their **recency is significantly higher**, meaning they have not purchased recently.
+
+This combination suggests that these customers represent **revenue at risk**. Without targeted re-engagement strategies, the business may lose a meaningful portion of future revenue.
+
+
+### 4. Growth segments represent future revenue potential
+
+Segments such as **Potential Loyalist**, **Promising**, and **New Customers** show relatively recent activity but lower purchase frequency and spending.
+
+This indicates that these customers are still in the early stages of their relationship with the business.
+
+Although their current revenue contribution is smaller, they represent **important growth opportunities** if successfully nurtured into more engaged customers.
+
+
+### 5. Customer value varies significantly across the lifecycle
+
+The RFM segmentation clearly reflects different stages of the customer lifecycle:
+
+- **Champions / Loyal** → highly engaged and valuable
+- **Growth segments** → early relationship stage with potential to grow
+- **At Risk / Cannot Lose Them** → previously valuable customers losing engagement
+- **Inactive segments** → low engagement and limited revenue contribution
+
+This lifecycle pattern highlights the importance of **segment-based customer strategies** rather than treating all customers the same.
+
+
+### Overall Insight
+
+The RFM analysis demonstrates that customer value is **unevenly distributed across the customer base**.
+
+A relatively small group of engaged customers generates the majority of revenue, while many customers remain inactive or contribute minimal value.
+
+Understanding these differences enables the business to design **targeted marketing, retention, and reactivation strategies** for each segment.
+
+
+
+---
+## 8) Recommendations
+
+Based on the RFM segmentation analysis and the key insights identified, several targeted strategies can be implemented to improve customer retention, increase revenue, and optimize marketing efforts.
+
+### 1. Retain and maximize value from Core Customers
+
+**Segments:** Champions, Loyal customers  
+**Objective:** Protect high-value customers and maximize lifetime value.
+
+These customers generate the largest share of revenue and show strong engagement across all RFM dimensions. Retention strategies should focus on maintaining their loyalty and increasing their spending.
+
+**Recommended actions**
+
+- Provide **VIP experiences** such as early access to new products or exclusive promotions  
+- Introduce **loyalty reward programs** or bonus points for repeat purchases  
+- Encourage **cross-selling and premium product bundles**  
+- Launch **referral programs** to leverage their engagement and attract new customers  
+
+Heavy discounting should be avoided for this segment in order to **protect profit margins**.
+
+
+
+### 2. Develop Growth Segments into future high-value customers
+
+**Segments:** Potential Loyalist, Promising, New Customers  
+**Objective:** Increase purchase frequency and move customers toward the Loyal segment.
+
+These customers have recently interacted with the business but have not yet developed strong purchasing behavior.
+
+**Recommended actions**
+
+- Use **personalized product recommendations** based on browsing or purchase history  
+- Offer **limited-time incentives** to encourage repeat purchases  
+- Promote **bundle offers or cross-category promotions**  
+- Implement **email onboarding campaigns** for new customers  
+
+The goal is to gradually increase both **purchase frequency and average order value (AOV)**.
+
+
+### 3. Re-engage customers at risk of churn
+
+**Segments:** At Risk, Cannot Lose Them, Need Attention  
+**Objective:** Prevent churn and recover previously valuable customers.
+
+These segments previously generated meaningful revenue but have recently shown declining engagement.
+
+**Recommended actions**
+
+- Launch **targeted win-back campaigns** through email or remarketing ads  
+- Offer **time-limited comeback discounts**  
+- Send **personalized reminders based on past purchases**  
+- Recommend products similar to their previous purchases  
+
+Since these customers historically generated strong revenue, successful reactivation can deliver **high return on marketing investment**.
+
+
+### 4. Apply low-cost reactivation strategies for inactive customers
+
+**Segments:** Hibernating customers, Lost customers, About To Sleep  
+**Objective:** Attempt reactivation while minimizing marketing costs.
+
+These customers show low engagement and limited recent activity.
+
+**Recommended actions**
+
+- Send **automated seasonal promotions or holiday campaigns**  
+- Use **low-cost email marketing flows**  
+- Offer **broad discount campaigns without heavy personalization**  
+
+If customers remain inactive after several attempts, marketing investment in this group should be limited.
+
+
+### Strategic takeaway
+
+Different customer segments require different engagement strategies.  
+
+Instead of applying a single marketing approach to all customers, the business should adopt a **segment-based strategy** that:
+
+- Retains high-value customers  
+- Develops emerging customer groups  
+- Prevents churn among valuable segments  
+- Minimizes costs for low-value customers
+
+
+---
+## 9) Final Conclusion
+
+This project applied **RFM segmentation** to analyze customer purchasing behavior and support a more targeted marketing strategy for a retail campaign.
+
+The analysis shows that **customer value is highly concentrated in a relatively small portion of the customer base**, while a large number of customers contribute limited revenue. This highlights the importance of understanding customer differences instead of treating all customers the same in marketing campaigns.
+
+From the segmentation analysis, three major patterns emerge:
+
+- **High-value customers** (**Champions** and **Loyal**) generate a disproportionately large share of total revenue and represent the core growth engine of the business.
+- **Declining but valuable customers** (**At Risk** and **Cannot Lose Them**) represent revenue that may be lost if engagement is not restored.
+- **Inactive customers** (**Lost** and **Hibernating**) account for a large portion of the customer base but contribute relatively little value, suggesting that marketing investment should be more carefully controlled for these segments.
+
+By combining **customer share**, **revenue contribution**, and **RFM behavioral profiles**, the analysis shows that different customer groups require different engagement strategies.
+
+Instead of running one broad campaign for all customers, the business can improve marketing efficiency by adopting a **segment-based approach** that focuses on:
+
+- retaining and monetizing high-value customers  
+- developing emerging customers into loyal buyers  
+- re-engaging valuable customers before they churn  
+- minimizing marketing costs for low-value inactive segments  
+
+Overall, this project demonstrates how **data-driven customer segmentation** can turn raw transaction data into actionable business insights, helping businesses allocate marketing resources more effectively and improve customer lifetime value.
+
+### Key Takeaway
+
+Customer segmentation transforms raw transaction data into **actionable marketing strategy**.  
+By identifying which customers drive revenue, which customers are at risk, and which customers have growth potential, businesses can make more precise, data-driven decisions instead of relying on generic campaigns.
+
+
