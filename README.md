@@ -1,4 +1,4 @@
-# 📊 Retail Customer Segmentation for Holiday Campaigns
+# 📊 Retail RFM Customer Segmentation for Holiday Campaigns | Python
 
 Customer segmentation using RFM analysis (Recency, Frequency, Monetary) to support targeted marketing campaigns for a global retail company during the Christmas & New Year seaso
 
